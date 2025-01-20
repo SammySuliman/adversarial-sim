@@ -3,6 +3,7 @@ import math
 import numpy as np
 import random
 from matplotlib.path import Path
+from matplotlib.transforms import Bbox
 
 class Bucket:
 
@@ -12,9 +13,10 @@ class Bucket:
 
         self.gathered_material = []
 
+        self.isCollision = False
+        self.isGoal = False
+
     def gatherMaterial(self, pointCloud):
-        # x_coords = pointCloud[:, 0]
-        # y_coords = pointCloud[:, 1]
         # Define the vertices of the polygon
         vertices = self.getVertices()
         # Create a Polygon object
@@ -28,27 +30,34 @@ class Bucket:
         if len(inside_points) != 0:
             self.gathered_material.extend(inside_points.tolist())
         return inside_points
-        '''
-        if self.tipx in x_coords:
-            indices = np.argwhere(pointCloud[:, 0] == self.tipx)
-            for index in indices:
-                if self.tipy in pointCloud[index][:, 1]:
-                    self.gathered_material.append((self.tipx, self.tipy))
-        '''
 
     def checkCollison(self, obstacle):
+        vertices = np.array(self.getVertices())
+        vertices_obs = np.array([(obstacle.CoM[0] - obstacle.dimx / 2, obstacle.CoM[1] - obstacle.dimy / 2),
+                                 (obstacle.CoM[0] + obstacle.dimx / 2, obstacle.CoM[1] + obstacle.dimy / 2),
+                                 (obstacle.CoM[0] - obstacle.dimx / 2, obstacle.CoM[1] + obstacle.dimy / 2),
+                                 (obstacle.CoM[0] + obstacle.dimx / 2, obstacle.CoM[1] - obstacle.dimy / 2)])
+        x_min, y_min = vertices.min(axis=0)
+        x_max, y_max = vertices.max(axis=0)
+        x_min_obs, y_min_obs = vertices_obs.min(axis=0)
+        x_max_obs, y_max_obs = vertices_obs.max(axis=0)
+        bbox = Bbox.from_extents(x_min, y_min, x_max, y_max)
+        bbox_obs = Bbox.from_extents(x_min_obs, y_min_obs, x_max_obs, y_max_obs)
+        if ((x_min <= x_min_obs and x_min_obs <= x_max) and (y_min <= y_max_obs and y_max_obs <= y_max)) or \
+        (x_min_obs <= x_min and x_min <= x_max_obs) and (y_min_obs <= y_max and y_max <= y_max_obs):
+            self.isCollision = True
+        '''
         if self.tipx > (obstacle.CoM[0] - obstacle.dimx / 2) and self.tipx < (obstacle.CoM[0] + obstacle.dimx / 2):
             if self.tipy > (obstacle.CoM[1] - obstacle.dimy / 2) and self.tipy < (obstacle.CoM[1] + obstacle.dimy / 2):
                 return True
             return False
         return False
-    
+        '''
+
     def reachedGoal(self, goal):
         distance = np.sqrt((self.tipx - goal.CoM[0]) ** 2 + (self.tipy - goal.CoM[1]) ** 2)
         if distance < goal.radius:
-            return True
-        else:
-            return False
+            self.isGoal = True
         
     def getVertices(self):
         return [(self.tipx, self.tipy), (self.tipx - 3, self.tipy + 1), (self.tipx - 3, self.tipy + 3), (self.tipx, self.tipy + 3)]
@@ -56,36 +65,24 @@ class Bucket:
     def move(self, velocity, time, current_dir):
         if current_dir == 'N':
             self.tipy += velocity * time
-            #print('tip y', self.tipy)
         elif current_dir == 'S':
             self.tipy -= velocity * time
-            #print('tip y', self.tipy)
         elif current_dir == 'E':
             self.tipx += velocity * time
-            #print('tip x', self.tipx)
         elif current_dir == 'W':
             self.tipx -= velocity * time
-            #print('tip x', self.tipx)
         elif current_dir == 'NW':
             self.tipy += velocity * time
             self.tipx -= velocity * time
-            #print('tip x', self.tipx)
-            #print('tip y', self.tipy)
         elif current_dir == 'NE':
             self.tipy += velocity * time
             self.tipx += velocity * time
-            #print('tip x', self.tipx)
-            #print('tip y', self.tipy)
         elif current_dir == 'SW':
             self.tipy -= velocity * time
             self.tipx -= velocity * time
-            #print('tip x', self.tipx)
-            #print('tip y', self.tipy)
         elif current_dir == 'SE':
             self.tipy -= velocity * time
             self.tipx += velocity * time
-            #print('tip x', self.tipx)
-            #print('tip y', self.tipy)
 
 
 class Obstacle:

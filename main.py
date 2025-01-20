@@ -15,11 +15,13 @@ class Simulation:
     def __init__(self):
         # Create some sample objects
         self.bucket = Bucket(initial_tip=(3, 3))
-        self.obstacle = Obstacle(dimensions=(4, 3), CoM=(8, 8))
+        self.obstacle = Obstacle(dimensions=(4, 3), CoM=(4, 4))
         self.goal = Goal(r=2, CoM=(15, 15))  
         self.iterations = 0
 
         self.pointCloud = np.array(capture_coords())
+
+        self.reverse_dirs = {'N': 'S', 'S': 'N', 'W': 'E', 'E': 'W', 'NE': 'SW', 'SW': 'NE', 'SE': 'NW', 'NW': 'SE'}
 
         # Plot the objects
         self.fig, self.ax = plt.subplots(figsize=(8, 8))
@@ -37,6 +39,9 @@ class Simulation:
         # Convert pixel coordinates to normalized mpl coordinates
         self.pointCloud[:, 0] = self.pointCloud[:, 0] * scale_x
         self.pointCloud[:, 1] = (fig_height - self.pointCloud[:, 1]) * scale_y  # Flip y-axis to match mpl coordinate system
+
+    def action_value_fxn(self):
+        pass
 
     def init_animation(self):
 
@@ -86,47 +91,53 @@ class Simulation:
 
         return self.bucket_polygon, self.bucket_tip_plot, self.obstacle_rect, self.goal_circle
 
-    def update(self, frame, max_iterations=50):
+    def update(self, frame, max_iterations=100):
         while self.iterations < max_iterations:
             # Set the current direction for each update
             directions = ['N', 'S', 'W', 'E', 'NW', 'NE', 'SW', 'SE']
+            #directions = ['N', 'E', 'NW', 'NE', 'SE']
             self.current_dir = random.choice(directions)
-            # Remove existing bucket from plot
-            # self.bucket_polygon.remove()
-            # Remove bucket tip marker
-            # self.bucket_tip_plot.remove()
-            # print('current direction of movement', self.current_dir)
             # Move bucket 1 step in existing direction
             self.bucket.move(velocity=1.0, time=1.0, current_dir=self.current_dir)
             # Update the polygon vertices
-            # print('new vertices', self.bucket.getVertices())
-            # print('point cloud', self.pointCloud)
-            # print('bucket tip', (simulation.bucket.tipx, simulation.bucket.tipy))
             self.bucket_polygon.set_xy(self.bucket.getVertices())
             # Update the bucket tip marker
             self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy))
             inside_points = self.bucket.gatherMaterial(self.pointCloud)
-            # print('gathered material', self.bucket.gathered_material)
             if len(inside_points) != 0:
                 # Remove all elements in the sublist
-                #self.pointCloud = [item for item in list(self.pointCloud) if item not in self.bucket.gathered_material]
-                #self.pointCloud = [point for point in self.pointCloud.tolist() if point not in self.bucket.gathered_material]
                 self.pointCloud = np.array([point for point in self.pointCloud.tolist() if not np.any(np.all(point == inside_points, axis=1))])
-                # print('new point cloud', self.pointCloud)
                 self.scatter.set_offsets(self.pointCloud)
-
-
             self.iterations += 1
-            print('iter number', self.iterations)
+            self.bucket.reachedGoal(self.goal)
+            if self.bucket.isGoal == True:
+                print('Goal succesfully reached!')
+                self.ani.event_source.stop()  # Stop the animation
+                break
+            else:
+                self.bucket.checkCollison(self.obstacle)
+                if self.bucket.isCollision == True:
+                    print('collided !')
+                    # Find previous direction to travel back in
+                    prev_dir = self.reverse_dirs[self.current_dir]
+                    # Move bucket 1 step back in previous direction
+                    self.bucket.move(velocity=1.0, time=1.0, current_dir=prev_dir)
+                    # Re-update the polygon vertices
+                    self.bucket_polygon.set_xy(self.bucket.getVertices())
+                    # Re-update the bucket tip marker
+                    self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy)) 
+                    # Set collision flag back to False 
+                    self.bucket.isCollision = False
+                print('iter number', self.iterations)
 
             return self.bucket_polygon, self.bucket_tip_plot
     
     def animate(self):
         # Animate the bucket
-        ani = FuncAnimation(self.fig, self.update, frames=50, init_func=self.init_animation, interval=50, blit=False)
+        self.ani = FuncAnimation(self.fig, self.update, frames=100, init_func=self.init_animation, interval=50, blit=False)
         plt.show()
 
-        return ani
+        return self.ani
 
 if __name__ == '__main__':
     simulation = Simulation()
