@@ -26,7 +26,6 @@ class Bucket:
 
         # Filter points that are inside
         inside_points = pointCloud[contained]
-        # print('inside pts', inside_points)
         if len(inside_points) != 0:
             self.gathered_material.extend(inside_points.tolist())
         return inside_points
@@ -46,13 +45,6 @@ class Bucket:
         if ((x_min <= x_min_obs and x_min_obs <= x_max) and (y_min <= y_max_obs and y_max_obs <= y_max)) or \
         (x_min_obs <= x_min and x_min <= x_max_obs) and (y_min_obs <= y_max and y_max <= y_max_obs):
             self.isCollision = True
-        '''
-        if self.tipx > (obstacle.CoM[0] - obstacle.dimx / 2) and self.tipx < (obstacle.CoM[0] + obstacle.dimx / 2):
-            if self.tipy > (obstacle.CoM[1] - obstacle.dimy / 2) and self.tipy < (obstacle.CoM[1] + obstacle.dimy / 2):
-                return True
-            return False
-        return False
-        '''
 
     def reachedGoal(self, goal):
         distance = np.sqrt((self.tipx - goal.CoM[0]) ** 2 + (self.tipy - goal.CoM[1]) ** 2)

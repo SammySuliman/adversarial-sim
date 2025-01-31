@@ -1,4 +1,7 @@
 import tkinter as tk
+import numpy as np
+from collections import defaultdict
+import pickle
 
 def capture_coords():
 
@@ -27,9 +30,14 @@ def capture_coords():
     root.mainloop()
 
     # Print the captured coordinates after closing the window
-    print("Captured Path Coordinates:", path_coordinates)
+    # print("Captured Path Coordinates:", path_coordinates)
 
     return path_coordinates
 
 if __name__ == '__main__':
-    capture_coords()
+    capture_array = capture_coords()
+    Q = defaultdict(float)
+    # Save the defaultdict to a file
+    with open('Q.pkl', 'wb') as file:
+        pickle.dump(Q, file)
+    #np.save("captured_coords.npy", capture_array)
