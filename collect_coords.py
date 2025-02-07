@@ -36,8 +36,4 @@ def capture_coords():
 
 if __name__ == '__main__':
     capture_array = capture_coords()
-    Q = defaultdict(float)
-    # Save the defaultdict to a file
-    with open('Q.pkl', 'wb') as file:
-        pickle.dump(Q, file)
     #np.save("captured_coords.npy", capture_array)

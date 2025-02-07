@@ -32,10 +32,7 @@ class Bucket:
 
     def checkCollison(self, obstacle):
         vertices = np.array(self.getVertices())
-        vertices_obs = np.array([(obstacle.CoM[0] - obstacle.dimx / 2, obstacle.CoM[1] - obstacle.dimy / 2),
-                                 (obstacle.CoM[0] + obstacle.dimx / 2, obstacle.CoM[1] + obstacle.dimy / 2),
-                                 (obstacle.CoM[0] - obstacle.dimx / 2, obstacle.CoM[1] + obstacle.dimy / 2),
-                                 (obstacle.CoM[0] + obstacle.dimx / 2, obstacle.CoM[1] - obstacle.dimy / 2)])
+        vertices_obs = obstacle.getVertices()
         x_min, y_min = vertices.min(axis=0)
         x_max, y_max = vertices.max(axis=0)
         x_min_obs, y_min_obs = vertices_obs.min(axis=0)
@@ -83,6 +80,14 @@ class Obstacle:
         self.dimx = dimensions[0]
         self.dimy = dimensions[1]
         self.CoM = CoM
+
+    def getVertices(self):
+        vertices = np.array([(self.CoM[0] - self.dimx / 2, self.CoM[1] - self.dimy / 2),
+                             (self.CoM[0] + self.dimx / 2, self.CoM[1] + self.dimy / 2),
+                             (self.CoM[0] - self.dimx / 2, self.CoM[1] + self.dimy / 2),
+                             (self.CoM[0] + self.dimx / 2, self.CoM[1] - self.dimy / 2)])
+        return vertices
+
 
 class Goal:
 
