@@ -185,19 +185,19 @@ if __name__ == '__main__':
     diff = 1e3
     starting_state = (0, 0)
     while diff > tol:
-        Q2 = bellman_eqn(Q, R, starting_state)
+        Q2 = bellman_eqn(Q, R)
         Q_arr = np.array(list(Q.values()))
         Q2_arr = np.array(list(Q2.values()))
         diff = np.max(np.abs(Q2_arr - Q_arr))
-        print('diff', diff)
+        #print('diff', diff)
         Q = Q2
         i = np.random.randint(0, 21)
         j = np.random.randint(0, 21)
         starting_state = (i, j)
-        print(starting_state)
+        #print(starting_state)
         num_iterations += 1
     pprint.pprint(Q)
-    print('num iterations', num_iterations)
+    #print('num iterations', num_iterations)
     # Save Q-table
     Q.default_factory = None  # Remove lambda function
     with open("q_table.pkl", "wb") as f:
