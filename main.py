@@ -14,7 +14,7 @@ import pprint
 
 matplotlib.use('TkAgg')
 
-from construct_Q_table import possible_future_states
+from construct_Q_table import possible_future_states2
 
 class Simulation:
     def __init__(self, pointCloud=[], initial_tip=(3,3), x_bounds=(0,20), y_bounds=(0,20)):
@@ -52,12 +52,16 @@ class Simulation:
         scale_x = 20 / fig_width  # Scale factor for x coordinates (from 0-20 range)
         scale_y = 20 / fig_height  # Scale factor for y coordinates (from 0-20 range)
 
+        print('scale x', scale_x, 'scale y', scale_y)
+
         # Convert pixel coordinates to normalized mpl coordinates
         self.pointCloud[:, 0] = self.pointCloud[:, 0] * scale_x
         self.pointCloud[:, 1] = (fig_height - self.pointCloud[:, 1]) * scale_y  # Flip y-axis to match mpl coordinate system
 
         self.x_min, self.x_max  = x_bounds
         self.y_min, self.y_max = y_bounds
+
+        self.explored_directions = defaultdict(list)
 
     def reward_fxn(self, inside_points):
         x = self.bucket.tipx
@@ -96,9 +100,9 @@ class Simulation:
         print('q values for curr state', q_values_for_state)
         # if multiple actions ave same reward, choose next action randomly
         best_action = max(actions, key=lambda a: Q[(i,j, a)])
-        max_value = Q[(i,j, best_action)]
-        best_actions = [a for a in actions if Q[(i, j, a)] == max_value]
-        best_action = random.choice(best_actions)
+        #max_value = Q[(i,j, best_action)]
+        #best_actions = [a for a in actions if Q[(i, j, a)] == max_value]
+        #best_action = random.choice(best_actions)
         return best_action
     
     def get_state(self):
@@ -223,10 +227,18 @@ class Simulation:
             # Set the current direction for each update
             pos = (self.bucket.tipx, self.bucket.tipy)
             print('pos', pos)
-            _, directions = possible_future_states(pos)
-            print('directions', directions)
-            action = self.choose_best_action(self.Q, pos, directions)
-            print('action', action)
+            directions_dict = possible_future_states2(pos)
+            print('directions', directions_dict)
+            # Remove this action as a choice for this state
+            for value in directions_dict[pos]:
+                print(self.explored_directions[pos])
+                print(value)
+                if pos in self.explored_directions and value in self.explored_directions[pos]:  # Ensure value exists in the list
+                    directions_dict[pos].remove(value)  # Remove value from list
+            print('new directions', directions_dict)
+            action = self.choose_best_action(self.Q, pos, directions_dict[pos])
+            self.explored_directions[pos].append(action)
+            print('explored directions', self.explored_directions)
             # Move bucket 1 step in existing direction
             self.bucket.move(velocity=1.0, time=1.0, current_dir=action)
             # Update the polygon vertices
@@ -236,7 +248,7 @@ class Simulation:
             if self.bucket.tipx < 0 or self.bucket.tipy < 0 or self.bucket.tipx > 20 or self.bucket.tipy > 20:
                 print('out of bounds !')
                 # Find previous direction to travel back in
-                prev_dir = self.reverse_dirs[self.current_dir]
+                prev_dir = self.reverse_dirs[action]
                 # Move bucket 1 step back in previous direction
                 self.bucket.move(velocity=1.0, time=1.0, current_dir=prev_dir)
                 # Re-update the polygon vertices
@@ -258,7 +270,7 @@ class Simulation:
                 if self.bucket.isCollision == True:
                     print('collided !')
                     # Find previous direction to travel back in
-                    prev_dir = self.reverse_dirs[self.current_dir]
+                    prev_dir = self.reverse_dirs[action]
                     # Move bucket 1 step back in previous direction
                     self.bucket.move(velocity=1.0, time=1.0, current_dir=prev_dir)
                     # Re-update the polygon vertices
