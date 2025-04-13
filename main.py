@@ -32,6 +32,7 @@ class Simulation:
 
         self.amount_material = len(self.pointCloud)
 
+        self.dirs = ['N', 'S', 'W', 'E', 'NE', 'SW', 'NW', 'SE']
         self.reverse_dirs = {'N': 'S', 'S': 'N', 'W': 'E', 'E': 'W', 'NE': 'SW', 'SW': 'NE', 'SE': 'NW', 'NW': 'SE'}
 
         self.currentQ = 0.0
@@ -62,6 +63,8 @@ class Simulation:
         self.y_min, self.y_max = y_bounds
 
         self.explored_directions = defaultdict(list)
+
+        self.reverse_action = None
 
     def reward_fxn(self, inside_points):
         x = self.bucket.tipx
@@ -97,7 +100,7 @@ class Simulation:
            to balance exploration + exploitation'''
         i, j = state
         q_values_for_state = {a: Q[(i, j, a)] for (x, y, a) in Q if (x, y) == (i, j)}
-        print('q values for curr state', q_values_for_state)
+        # print('q values for curr state', q_values_for_state)
         # if multiple actions ave same reward, choose next action randomly
         best_action = max(actions, key=lambda a: Q[(i,j, a)])
         #max_value = Q[(i,j, best_action)]
@@ -164,9 +167,10 @@ class Simulation:
         return self.bucket_polygon, self.bucket_tip_plot, self.obstacle_rect, self.goal_circle
 
     def update(self, frame, max_iterations=100):
+        directions = self.dirs
         while self.iterations < max_iterations:
+            print('directions', directions)
             # Set the current direction for each update
-            directions = ['N', 'S', 'W', 'E', 'NW', 'NE', 'SW', 'SE']
             self.current_dir = random.choice(directions)
             # Move bucket 1 step in existing direction
             self.bucket.move(velocity=1.0, time=1.0, current_dir=self.current_dir)
@@ -183,7 +187,11 @@ class Simulation:
                 # Re-update the polygon vertices
                 self.bucket_polygon.set_xy(self.bucket.getVertices())
                 # Re-update the bucket tip marker
-                self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy))                 
+                self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy))
+                # Remove blocked direction from avaliable paths
+                directions = [x for x in self.dirs if x != self.current_dir]
+            else:
+                directions = self.dirs          
             inside_points = self.bucket.gatherMaterial(self.pointCloud)
             if len(inside_points) != 0:
                 # Remove all elements in the sublist
@@ -221,30 +229,37 @@ class Simulation:
 
             return self.bucket_polygon, self.bucket_tip_plot
         
-    def update_q(self, frame, max_iterations=100):
+    def update_q(self, frame, max_iterations=200):
         while self.iterations_ < max_iterations:
             print('iter number', self.iterations_)
             # Set the current direction for each update
             pos = (self.bucket.tipx, self.bucket.tipy)
             print('pos', pos)
             directions_dict = possible_future_states2(pos)
-            print('directions', directions_dict)
-            # Remove this action as a choice for this state
+            # Ensure bucket cannot travel backwards to previous position
+            if pos in directions_dict:
+                print('rev action', self.reverse_action)
+                if self.reverse_action in directions_dict[pos]:
+                    directions_dict[pos].remove(self.reverse_action)  # Remove value from list
+                    print('other removed direction', self.reverse_action)  
+            # Remove prev explored directions as a choice for this state
             for value in directions_dict[pos]:
-                print(self.explored_directions[pos])
-                print(value)
                 if pos in self.explored_directions and value in self.explored_directions[pos]:  # Ensure value exists in the list
                     directions_dict[pos].remove(value)  # Remove value from list
-            print('new directions', directions_dict)
+                    print('removed direction', value)
+            # print('directions', directions_dict)
             action = self.choose_best_action(self.Q, pos, directions_dict[pos])
+            print('action', action)
+            self.reverse_action = self.reverse_dirs[action]
             self.explored_directions[pos].append(action)
-            print('explored directions', self.explored_directions)
+            # print('explored directions', self.explored_directions)
             # Move bucket 1 step in existing direction
             self.bucket.move(velocity=1.0, time=1.0, current_dir=action)
             # Update the polygon vertices
             self.bucket_polygon.set_xy(self.bucket.getVertices())
             # Update the bucket tip marker
-            self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy))
+            self.bucket_tip_plot.set_offsets((self.bucket.tipx, self.bucket.tipy))     
+            
             if self.bucket.tipx < 0 or self.bucket.tipy < 0 or self.bucket.tipx > 20 or self.bucket.tipy > 20:
                 print('out of bounds !')
                 # Find previous direction to travel back in
@@ -283,7 +298,6 @@ class Simulation:
 
             return self.bucket_polygon, self.bucket_tip_plot
 
-    
     def animate(self):
         # Animate the bucket
         self.ani = FuncAnimation(self.fig, self.update, frames=100, init_func=self.init_animation, interval=50, blit=False)
@@ -293,7 +307,7 @@ class Simulation:
     def animate_q(self, Q):
         # Animate the bucket
         self.Q = Q
-        self.ani = FuncAnimation(self.fig, self.update_q, frames=100, init_func=self.init_animation, interval=50, blit=False)
+        self.ani = FuncAnimation(self.fig, self.update_q, frames=200, init_func=self.init_animation, interval=50, blit=False)
         plt.show()
         return self.ani
 
