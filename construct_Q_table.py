@@ -183,7 +183,7 @@ if __name__ == '__main__':
     tol = 0.0
     num_iterations = 0
     diff = 1e3
-    starting_state = (0, 0)
+    #starting_state = (3, 3)
     while diff > tol:
         Q2 = bellman_eqn(Q, R)
         Q_arr = np.array(list(Q.values()))
@@ -193,7 +193,7 @@ if __name__ == '__main__':
         Q = Q2
         i = np.random.randint(0, 21)
         j = np.random.randint(0, 21)
-        starting_state = (i, j)
+        #starting_state = (i, j)
         #print(starting_state)
         num_iterations += 1
     pprint.pprint(Q)
